@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin · BCA Nexus Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f0f4f8;
+            display: flex;
+            min-height: 100vh;
+        }
+        /* Dark Sidebar */
+        .sidebar {
+            width: 280px;
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 28px 20px;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+        .sidebar h2 {
+            font-size: 1.5rem;
+            margin-bottom: 32px;
+            color: #00c2d1;
+        }
+        .sidebar nav a {
+            display: block;
+            padding: 12px 16px;
+            margin: 4px 0;
+            color: #cbd5e1;
+            text-decoration: none;
+            border-radius: 12px;
+            transition: 0.2s;
+        }
+        .sidebar nav a:hover, .sidebar nav a.active {
+            background: #1e293b;
+            color: #00c2d1;
+        }
+        .main-content {
+            margin-left: 280px;
+            flex: 1;
+            padding: 28px 32px;
+        }
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border: 1px solid #e2e8f0;
+        }
+        .form-group {
+            margin-bottom: 16px;
+        }
+        label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 6px;
+            font-size: 0.85rem;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 12px;
+            font-family: inherit;
+        }
+        button {
+            background: #00b4c4;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 40px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .badge {
+            background: #e6f7f9;
+            padding: 4px 10px;
+            border-radius: 30px;
+            font-size: 0.75rem;
+        }
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); position: fixed; z-index: 1000; }
+            .main-content { margin-left: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>🔷 BCA Nexus</h2>
+        <nav>
+            <a href="#" class="active" data-section="dashboard">📊 Dashboard</a>
+            <a href="#" data-section="semesters">📚 Semesters</a>
+            <a href="#" data-section="subjects">📖 Subjects</a>
+            <a href="#" data-section="units">📁 Units</a>
+            <a href="#" data-section="notes">📝 Notes</a>
+            <a href="#" data-section="pyqs">📜 PYQs</a>
+            <a href="#" data-section="questions">⭐ Important Qs</a>
+            <a href="#" data-section="leads">👥 Leads</a>
+            <a href="#" id="logoutBtn" style="color:#ef4444;">🚪 Logout</a>
+        </nav>
+    </div>
+    <div class="main-content" id="mainContent">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h1 id="sectionTitle">Admin Dashboard</h1>
+            <div id="adminStatus"></div>
+        </div>
+        <div id="dynamicPanel"></div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://YOUR_PROJECT.supabase.co';
+        const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Check Auth
+        async function checkAdmin() {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                const email = prompt("Admin Login - Enter email:");
+                const pwd = prompt("Password:");
+                if(email && pwd) {
+                    const { error } = await supabase.auth.signInWithPassword({ email, password: pwd });
+                    if(error) return alert("Login failed: " + error.message);
+                    location.reload();
+                } else window.location.href = "index.html";
+            } else {
+                document.getElementById('adminStatus').innerHTML = `✅ Admin: ${session.user.email}`;
+                loadSection('dashboard');
+            }
+        }
+
+        async function loadSection(section) {
+            const panel = document.getElementById('dynamicPanel');
+            document.getElementById('sectionTitle').innerText = section.toUpperCase();
+            if(section === 'semesters') await renderSemesters();
+            else if(section === 'subjects') await renderSubjects();
+            else if(section === 'units') await renderUnits();
+            else if(section === 'notes') await renderNotes();
+            else if(section === 'pyqs') await renderPYQs();
+            else if(section === 'questions') await renderImpQs();
+            else if(section === 'leads') await renderLeads();
+            else panel.innerHTML = `<div class="card"><h3>Welcome back</h3><p>Manage your BCA content from here.</p></div>`;
+        }
+
+        async function renderSemesters() {
+            const { data } = await supabase.from('semesters').select('*');
+            document.getElementById('dynamicPanel').innerHTML = `
+                <div class="card"><h3>➕ Add Semester</h3><input id="semName" placeholder="Semester 1"><button onclick="addSemester()">Add</button></div>
+                <div class="card"><table><tr><th>ID</th><th>Name</th><th>Actions</th></tr>${data?.map(s => `<tr><td>${s.id}</td><td>${s.name}</td><td><button onclick="deleteItem('semesters',${s.id})">Delete</button></td></tr>`).join('')}</table></div>
+            `;
+        }
+        async function renderSubjects() {
+            const { data } = await supabase.from('subjects').select('*, semesters(name)');
+            const { data: sems } = await supabase.from('semesters').select('*');
+            document.getElementById('dynamicPanel').innerHTML = `
+                <div class="card"><h3>Add Subject</h3><select id="semesterId">${sems?.map(s=>`<option value="${s.id}">Sem ${s.name}</option>`)}</select><input id="subName" placeholder="Subject Name"><button onclick="addSubject()">Add</button></div>
+                <div class="card"><table>${data?.map(s=>`<tr><td>${s.name}</td><td>Semester ${s.semesters?.name}</td><td><button onclick="deleteItem('subjects',${s.id})">Del</button></td></tr>`).join('')}</table></div>
+            `;
+        }
+        async function renderUnits() {
+            const { data: subs } = await supabase.from('subjects').select('*');
+            const { data: units } = await supabase.from('units').select('*, subjects(name)');
+            document.getElementById('dynamicPanel').innerHTML = `
+                <div class="card"><h3>Add Unit</h3><select id="subjectId">${subs?.map(s=>`<option value="${s.id}">${s.name}</option>`)}</select><input id="unitName" placeholder="Unit Name"><button onclick="addUnit()">Add</button></div>
+                <div class="card"><table>${units?.map(u=>`<tr><td>${u.name}</td><td>${u.subjects?.name}</td><td><button onclick="deleteItem('units',${u.id})">Del</button></td></tr>`).join('')}</table></div>
+            `;
+        }
+        async function renderNotes() {
+            const { data: units } = await supabase.from('units').select('*, subjects(name)');
+            const { data: notes } = await supabase.from('notes').select('*, units(name)');
+            document.getElementById('dynamicPanel').innerHTML = `
+                <div class="card"><h3>📝 Add Note</h3><select id="unitId">${units?.map(u=>`<option value="${u.id}">${u.name} (${u.subjects?.name})</option>`)}</select><input id="noteTitle" placeholder="Title"><textarea id="engContent" rows="4" placeholder="English Content (HTML)"></textarea><textarea id="hinContent" rows="4" placeholder="Hindi Content"></textarea><button onclick="addNote()">Publish Note</button></div>
+                <div class="card"><h3>Existing Notes</h3>${notes?.map(n=>`<p><strong>${n.title}</strong> - Unit:${n.units?.name} <button onclick="deleteItem('notes',${n.id})">Delete</button></p>`).join('')}</div>
+            `;
+        }
+        async function renderPYQs() {
+            const { data: units } = await supabase.from('units').select('*');
+            const { data: pyqs } = await supabase.from('pyqs').select('*, units(name)');
+            document.getElementById('dynamicPanel').innerHTML = `
+                <div class="card"><h3>Add PYQ</h3><select id="pyqUnitId">${units?.map(u=>`<option value="${u.id}">${u.name}</option>`)}</select><input id="year" placeholder="Year"><input id="question" placeholder="Question"><textarea id="answer" placeholder="Answer"></textarea><button onclick="addPYQ()">Add</button></div>
+                <div class="card">${pyqs?.map(p=>`<p>📅 ${p.year}: ${p.question.substring(0,50)} <button onclick="deleteItem('pyqs',${p.id})">Delete</button></p>`).join('')}</div>
+            `;
+        }
+        async function renderImpQs() {
+            const { data: units } = await supabase.from('units').select('*');
+            const { data: qs } = await supabase.from('important_questions').select('*, units(name)');
+            document.getElementById('dynamicPanel').innerHTML = `
+                <div class="card"><h3>Add Important Q</h3><select id="impUnitId">${units?.map(u=>`<option value="${u.id}">${u.name}</option>`)}</select><input id="category" placeholder="Category (Viva/Most Repeated)"><input id="qtext" placeholder="Question"><textarea id="ansText" placeholder="Answer"></textarea><button onclick="addImpQ()">Add</button></div>
+                <div class="card">${qs?.map(q=>`<p><strong>${q.category}:</strong> ${q.question} <button onclick="deleteItem('important_questions',${q.id})">Del</button></p>`).join('')}</div>
+            `;
+        }
+        async function renderLeads() {
+            const { data } = await supabase.from('leads').select('*').order('created_at', {ascending:false});
+            document.getElementById('dynamicPanel').innerHTML = `<div class="card"><h3>Lead Submissions</h3><table>${data?.map(l=>`<tr><td>${l.name}</td><td>${l.mobile}</td><td>${new Date(l.created_at).toLocaleDateString()}</td></tr>`).join('')}</table></div>`;
+        }
+
+        // CRUD helpers
+        window.addSemester = async () => { const name = document.getElementById('semName').value; await supabase.from('semesters').insert([{name}]); loadSection('semesters'); };
+        window.addSubject = async () => { const semester_id = document.getElementById('semesterId').value; const name = document.getElementById('subName').value; await supabase.from('subjects').insert([{semester_id, name}]); loadSection('subjects'); };
+        window.addUnit = async () => { const subject_id = document.getElementById('subjectId').value; const name = document.getElementById('unitName').value; await supabase.from('units').insert([{subject_id, name}]); loadSection('units'); };
+        window.addNote = async () => { const unit_id = document.getElementById('unitId').value; const title = document.getElementById('noteTitle').value; const english_content = document.getElementById('engContent').value; const hindi_content = document.getElementById('hinContent').value; await supabase.from('notes').insert([{unit_id, title, english_content, hindi_content}]); loadSection('notes'); };
+        window.addPYQ = async () => { const unit_id = document.getElementById('pyqUnitId').value; const year = document.getElementById('year').value; const question = document.getElementById('question').value; const answer = document.getElementById('answer').value; await supabase.from('pyqs').insert([{unit_id, year, question, answer}]); loadSection('pyqs'); };
+        window.addImpQ = async () => { const unit_id = document.getElementById('impUnitId').value; const category = document.getElementById('category').value; const question = document.getElementById('qtext').value; const answer = document.getElementById('ansText').value; await supabase.from('important_questions').insert([{unit_id, category, question, answer}]); loadSection('questions'); };
+        window.deleteItem = async (table, id) => { if(confirm('Delete?')){ await supabase.from(table).delete().eq('id', id); loadSection(table); } };
+
+        document.querySelectorAll('.sidebar nav a').forEach(a => {
+            if(a.id !== 'logoutBtn') a.addEventListener('click', (e) => {
+                e.preventDefault(); loadSection(a.dataset.section);
+                document.querySelectorAll('.sidebar nav a').forEach(nav => nav.classList.remove('active'));
+                a.classList.add('active');
+            });
+        });
+        document.getElementById('logoutBtn')?.addEventListener('click', async () => { await supabase.auth.signOut(); location.reload(); });
+        checkAdmin();
+    </script>
+</body>
+</html>
