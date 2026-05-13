@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BCA Platform - Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: system-ui, -apple-system, sans-serif; background: #f0f4f8; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .card { background: white; border-radius: 16px; padding: 20px; margin: 16px 0; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; margin: 20px 0; }
+        .btn { background: #0891b2; color: white; padding: 10px 24px; border: none; border-radius: 40px; cursor: pointer; }
+        input, textarea { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 12px; }
+        .status { padding: 12px; border-radius: 12px; margin: 12px 0; }
+        .success { background: #d1fae5; color: #065f46; }
+        .error { background: #fee2e2; color: #991b1b; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📚 BCA Nexus Platform</h1>
+        <p id="connectionStatus">Checking connection...</p>
+        
+        <h2>📖 Semesters</h2>
+        <div id="semestersList">Loading...</div>
+        
+        <hr style="margin: 30px 0;">
+        
+        <h2>🔧 Quick Add (Test Data)</h2>
+        <div>
+            <input type="text" id="semName" placeholder="Semester Name (e.g., 1,2,3)">
+            <button class="btn" onclick="addSemester()">Add Semester</button>
+        </div>
+    </div>
+
+    <script>
+        // 🔴🔴🔴 YAHAN APNA SUPABASE URL AUR KEY DALO 🔴🔴🔴
+        const SUPABASE_URL = 'https://vsggrvcbpinazybuxzny.supabase.co';     // CHANGE THIS
+        const SUPABASE_ANON_KEY = 'sb_publishable_NPNwR4HTlKfm5hoQEgA-eA_EhVzqSuu';                  // CHANGE THIS
+        
+        console.log('Supabase URL:', SUPABASE_URL);
+        
+        // Initialize Supabase Client
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        // Test Connection
+        async function testConnection() {
+            try {
+                const { data, error } = await supabase.from('semesters').select('count', { count: 'exact', head: true });
+                if (error) throw error;
+                document.getElementById('connectionStatus').innerHTML = '<div class="status success">✅ Connected to Supabase! Table exists.</div>';
+                loadSemesters();
+            } catch (err) {
+                document.getElementById('connectionStatus').innerHTML = `<div class="status error">❌ Connection Failed: ${err.message}<br><br>Check:<br>1. Supabase URL is correct<br>2. Anon Key is correct<br>3. Table "semesters" exists<br>4. Run SQL queries in Supabase</div>`;
+            }
+        }
+        
+        // Load Semesters
+        async function loadSemesters() {
+            try {
+                const { data, error } = await supabase.from('semesters').select('*').order('id');
+                if (error) throw error;
+                
+                const container = document.getElementById('semestersList');
+                if (!data || data.length === 0) {
+                    container.innerHTML = '<div class="card">No semesters found. Add one using the form below.</div>';
+                    return;
+                }
+                
+                container.innerHTML = `
+                    <div class="grid">
+                        ${data.map(s => `
+                            <div class="card" onclick="alert('Semester ${s.name} selected! In full version, this will open subjects.')">
+                                <div style="font-size: 2rem;">📚</div>
+                                <div style="font-weight: bold; font-size: 1.2rem;">Semester ${s.name}</div>
+                                <div style="color: #0891b2; margin-top: 8px;">Explore →</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            } catch (err) {
+                console.error('Load error:', err);
+                document.getElementById('semestersList').innerHTML = `<div class="status error">Error loading: ${err.message}</div>`;
+            }
+        }
+        
+        // Add Semester
+        window.addSemester = async function() {
+            const name = document.getElementById('semName').value.trim();
+            if (!name) {
+                alert('Please enter semester name');
+                return;
+            }
+            
+            try {
+                const { error } = await supabase.from('semesters').insert([{ name: name }]);
+                if (error) throw error;
+                document.getElementById('semName').value = '';
+                alert('Semester added successfully!');
+                loadSemesters();
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        };
+        
+        // Run test
+        testConnection();
+    </script>
+</body>
+</html>
