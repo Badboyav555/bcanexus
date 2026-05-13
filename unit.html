@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BCA Nexus - Unit Content</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #f8fafc; }
+        .container { max-width: 1000px; margin: 0 auto; padding: 0 20px; }
+        .navbar { background: white; border-bottom: 1px solid #e2e8f0; padding: 16px 0; position: sticky; top: 0; z-index: 100; }
+        .nav-flex { display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 1.5rem; font-weight: 700; background: linear-gradient(135deg, #0b6b72, #00c2d1); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .lang-toggle { display: flex; gap: 8px; background: #f1f5f9; padding: 4px; border-radius: 40px; }
+        .lang-btn { padding: 8px 20px; border-radius: 32px; border: none; cursor: pointer; background: transparent; }
+        .lang-btn.active { background: #00c2d1; color: white; }
+        .back-link { display: inline-block; margin: 20px 0; color: #00a2b3; text-decoration: none; cursor: pointer; }
+        .tabs { display: flex; gap: 8px; margin: 24px 0; border-bottom: 2px solid #e2e8f0; }
+        .tab { padding: 12px 24px; cursor: pointer; font-weight: 500; color: #64748b; border: none; background: none; }
+        .tab.active { color: #00c2d1; border-bottom: 2px solid #00c2d1; margin-bottom: -2px; }
+        .card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 16px; border: 1px solid #e2e8f0; cursor: pointer; transition: 0.2s; }
+        .card:hover { border-color: #00c2d1; }
+        details { background: white; border-radius: 16px; padding: 16px; margin-bottom: 12px; border: 1px solid #e2e8f0; }
+        details summary { font-weight: 600; cursor: pointer; }
+        .footer { text-align: center; padding: 40px 0; border-top: 1px solid #e2e8f0; margin-top: 40px; }
+        h3 { margin: 20px 0 10px; color: #0f172a; }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <div class="container nav-flex">
+            <div class="logo">BCA NEXUS</div>
+            <div class="lang-toggle">
+                <button class="lang-btn active" data-lang="en">English</button>
+                <button class="lang-btn" data-lang="hi">हिंदी</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container" id="app"></div>
+    <div class="footer"><p>BCA Nexus — Your Study Partner</p></div>
+
+    <script>
+        const SUPABASE_URL = 'https://vsggrvcbpinazybuxzny.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_NPNwR4HTlKfm5hoQEgA-eA_EhVzqSuu';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        let currentLang = localStorage.getItem('lang') || 'en';
+        let notesData = [], pyqsData = [], impData = [];
+
+        async function loadPage() {
+            const unitId = new URLSearchParams(window.location.search).get('id');
+            if (!unitId) { window.location.href = 'index.html'; return; }
+            
+            const { data: notes } = await supabase.from('notes').select('*').eq('unit_id', unitId);
+            const { data: pyqs } = await supabase.from('pyqs').select('*').eq('unit_id', unitId);
+            const { data: impQs } = await supabase.from('important_questions').select('*').eq('unit_id', unitId);
+            const { data: unit } = await supabase.from('units').select('name').eq('id', unitId).single();
+            
+            notesData = notes || [];
+            pyqsData = pyqs || [];
+            impData = impQs || [];
+            
+            const app = document.getElementById('app');
+            app.innerHTML = `
+                <div class="back-link" onclick="history.back()">← Back to Subject</div>
+                <h1>${unit?.name || 'Unit'}</h1>
+                <div class="tabs">
+                    <button class="tab active" data-tab="notes">📄 Notes (${notesData.length})</button>
+                    <button class="tab" data-tab="pyq">📜 PYQs (${pyqsData.length})</button>
+                    <button class="tab" data-tab="imp">⭐ Important Questions (${impData.length})</button>
+                </div>
+                <div id="contentArea"></div>
+            `;
+            
+            showTab('notes');
+            
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    showTab(tab.dataset.tab);
+                });
+            });
+        }
+        
+        function showTab(tab) {
+            const area = document.getElementById('contentArea');
+            if (tab === 'notes') {
+                if (notesData.length === 0) {
+                    area.innerHTML = '<div class="card">No notes available yet.</div>';
+                    return;
+                }
+                area.innerHTML = notesData.map(n => `
+                    <div class="card" onclick="gotoNote(${n.id})">
+                        <div style="font-weight: 600;">📘 ${n.title}</div>
+                        <div style="font-size: 0.8rem; color: #64748b; margin-top: 8px;">Click to read full notes →</div>
+                    </div>
+                `).join('');
+            } 
+            else if (tab === 'pyq') {
+                if (pyqsData.length === 0) {
+                    area.innerHTML = '<div class="card">No PYQs available yet.</div>';
+                    return;
+                }
+                area.innerHTML = pyqsData.map(p => `
+                    <details>
+                        <summary>📅 ${p.year} · ${p.difficulty || 'Medium'}</summary>
+                        <div style="margin-top: 12px;"><strong>Question:</strong> ${p.question}</div>
+                        <div style="margin-top: 8px;"><strong>Answer:</strong> ${p.answer || 'Answer will be updated soon.'}</div>
+                    </details>
+                `).join('');
+            }
+            else if (tab === 'imp') {
+                if (impData.length === 0) {
+                    area.innerHTML = '<div class="card">No important questions yet.</div>';
+                    return;
+                }
+                const grouped = {};
+                impData.forEach(q => { if (!grouped[q.category]) grouped[q.category] = []; grouped[q.category].push(q); });
+                let html = '';
+                for (let cat in grouped) {
+                    html += `<h3>📌 ${cat}</h3>`;
+                    html += grouped[cat].map(q => `
+                        <div class="card" style="cursor: default;">
+                            <strong>❓ ${q.question}</strong>
+                            <div style="margin-top: 8px; color: #475569;">${q.answer || ''}</div>
+                        </div>
+                    `).join('');
+                }
+                area.innerHTML = html;
+            }
+        }
+        
+        window.gotoNote = (id) => { window.location.href = `notes.html?id=${id}`; };
+        
+        function setLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('lang', lang);
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                if (btn.dataset.lang === lang) btn.classList.add('active');
+                else btn.classList.remove('active');
+            });
+        }
+        
+        document.querySelectorAll('.lang-btn').forEach(btn => {
+            if (btn.dataset.lang === currentLang) btn.classList.add('active');
+            btn.addEventListener('click', () => setLanguage(btn.dataset.lang));
+        });
+        
+        loadPage();
+    </script>
+</body>
+</html>
