@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Supabase Fetch Test</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    *{
+      margin:0;
+      padding:0;
+      box-sizing:border-box;
+    }
+
+    body{
+      font-family:Arial,sans-serif;
+      background:#f4f7fb;
+      padding:20px;
+    }
+
+    h1{
+      margin-bottom:20px;
+      text-align:center;
+    }
+
+    .box{
+      background:white;
+      border-radius:16px;
+      padding:20px;
+      margin-bottom:20px;
+      box-shadow:0 5px 20px rgba(0,0,0,0.08);
+    }
+
+    button{
+      padding:12px 18px;
+      border:none;
+      border-radius:10px;
+      background:#06b6d4;
+      color:white;
+      cursor:pointer;
+      margin-bottom:20px;
+    }
+
+    pre{
+      white-space:pre-wrap;
+      word-break:break-word;
+      overflow:auto;
+      background:#f0f3f7;
+      padding:15px;
+      border-radius:10px;
+      margin-top:10px;
+    }
+
+    .success{
+      color:green;
+      font-weight:bold;
+    }
+
+    .error{
+      color:red;
+      font-weight:bold;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Supabase Fetch Test</h1>
+
+<div class="box">
+
+  <button onclick="fetchSemesters()">
+    Fetch Semesters
+  </button>
+
+  <button onclick="fetchSubjects()">
+    Fetch Subjects
+  </button>
+
+  <button onclick="fetchUnits()">
+    Fetch Units
+  </button>
+
+  <button onclick="fetchNotes()">
+    Fetch Notes
+  </button>
+
+  <button onclick="fetchPyqs()">
+    Fetch PYQs
+  </button>
+
+  <button onclick="fetchImportantQuestions()">
+    Fetch Important Questions
+  </button>
+
+</div>
+
+<div class="box">
+  <div id="status"></div>
+  <pre id="output">Click any button to fetch data...</pre>
+</div>
+
+<script>
+
+  // =====================================
+  // SUPABASE CONFIG
+  // =====================================
+
+  const SUPABASE_URL = "https://vsggrvcbpinazybuxzny.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_NPNwR4HTlKfm5hoQEgA-eA_EhVzqSuu";
+
+  // =====================================
+  // CREATE CLIENT
+  // =====================================
+
+  const supabaseClient = supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+  );
+
+  // =====================================
+  // COMMON FUNCTION
+  // =====================================
+
+  function showResult(data,error){
+
+    const output = document.getElementById("output");
+    const status = document.getElementById("status");
+
+    if(error){
+
+      status.innerHTML = "ERROR";
+      status.className = "error";
+
+      output.textContent = JSON.stringify(error,null,2);
+
+      console.error(error);
+
+    }else{
+
+      status.innerHTML = "DATA FETCHED SUCCESSFULLY";
+      status.className = "success";
+
+      output.textContent = JSON.stringify(data,null,2);
+
+      console.log(data);
+
+    }
+
+  }
+
+  // =====================================
+  // FETCH SEMESTERS
+  // =====================================
+
+  async function fetchSemesters(){
+
+    const { data, error } = await supabaseClient
+      .from("semesters")
+      .select("*");
+
+    showResult(data,error);
+
+  }
+
+  // =====================================
+  // FETCH SUBJECTS
+  // =====================================
+
+  async function fetchSubjects(){
+
+    const { data, error } = await supabaseClient
+      .from("subjects")
+      .select("*");
+
+    showResult(data,error);
+
+  }
+
+  // =====================================
+  // FETCH UNITS
+  // =====================================
+
+  async function fetchUnits(){
+
+    const { data, error } = await supabaseClient
+      .from("units")
+      .select("*");
+
+    showResult(data,error);
+
+  }
+
+  // =====================================
+  // FETCH NOTES
+  // =====================================
+
+  async function fetchNotes(){
+
+    const { data, error } = await supabaseClient
+      .from("notes")
+      .select("*");
+
+    showResult(data,error);
+
+  }
+
+  // =====================================
+  // FETCH PYQS
+  // =====================================
+
+  async function fetchPyqs(){
+
+    const { data, error } = await supabaseClient
+      .from("pyqs")
+      .select("*");
+
+    showResult(data,error);
+
+  }
+
+  // =====================================
+  // FETCH IMPORTANT QUESTIONS
+  // =====================================
+
+  async function fetchImportantQuestions(){
+
+    const { data, error } = await supabaseClient
+      .from("important_questions")
+      .select("*");
+
+    showResult(data,error);
+
+  }
+
+</script>
+
+</body>
+</html>
